@@ -1,8 +1,6 @@
 import streamlit
 from pymongo import MongoClient
 
-#ToDo: Wie schließe ich Verbindungen, ohne, dass es beim nächsten verbinden einen Fehler gibt?!
-
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
