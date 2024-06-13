@@ -5,11 +5,11 @@ import openai
 import db
 import parameters as par
 
-#import pw_check as pw
+import pw_check as pw
 
 # Passwort checken
-#if pw.check_password() == False:
-#    st.stop()  # Do not continue if check_password is not True.
+if pw.check_password() == False:
+    st.stop()
 
 openai.api_key=st.secrets["OPENAI_API_KEY"]
 
