@@ -1,6 +1,8 @@
 import streamlit
 from pymongo import MongoClient
 
+#ToDo: Wie schließe ich Verbindungen, ohne, dass es beim nächsten verbinden einen Fehler gibt?!
+
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -14,9 +16,15 @@ uri = streamlit.secrets["URI_MONGODB"]
 client = MongoClient(uri, server_api=ServerApi('1'))
 
 # Neuen Bot im Sandkasten teilen
-def insert_bot(new):
+def insert_bot_sandkasten(bot):
     try:
-        client.ErgoMaite.Bots.insert_one(new)
+        bot_name = bot["bot_name"]
+        test_existance = client.ErgoMaite.Sandkasten.find_one({"bot_name": bot_name})
+        if test_existance == None:
+            client.ErgoMaite.Sandkasten.insert_one(bot)
+            return True
+        else:
+            return False
     except Exception as e:
         raise Exception("The following error occurred: ", e)
 
@@ -34,19 +42,26 @@ def get_bot(bot_name):
     except Exception as e:
         raise Exception(f"The following error occurred:", e)
 
-# Bot anhand des System-Prompts in der db suchen und Inhalt des Documents zurückgeben
-def search_bot(sys_prompt):
+def get_bot_spielplatz(bot_name):
     try:
-        bot = client.ErgoMaite.Bots.find_one({"sys_prompt":sys_prompt})
+        bot = client.ErgoMaite.Sandkasten.find_one({"bot_name":bot_name})
+        return bot
+    except Exception as e:
+        raise Exception(f"The following error occurred:", e)
+
+# Bot anhand des System-Prompts in der db suchen und Inhalt des Documents zurückgeben
+def search_bot(bot_name):
+    try:
+        bot = client.ErgoMaite.Sandkasten.find_one({"bot_name":bot_name})
         return bot
     except Exception as e:
         raise Exception("The following error occurred: ", e)
 
 # Alle Systemprompts auflisten (wird verwendet, um die Buttons im Sandkasten zu erstellen)
-def get_all_sys_prompts():
+def get_all_bot_names():
     try:
-        sys_prompts = client.ErgoMaite.Bots.distinct("sys_prompt")
-        return sys_prompts
+        bot_names = client.ErgoMaite.Sandkasten.distinct("bot_name")
+        return bot_names
     except Exception as e:
         raise Exception("The following error occurred: ", e)
 
