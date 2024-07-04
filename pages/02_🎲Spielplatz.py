@@ -99,18 +99,18 @@ with st.sidebar:
 
 
 # Im Sandkasten teilen
-    #if st.button('**Bot im Sandkasten teilen**'):
+    if st.button('**Bot im Sandkasten teilen**'):
         # Liste erstellen mit Prompt, Temp und Model
-        #bot = ({"bot_name":st.session_state.bot_name,
-        #"sys_prompt":st.session_state.sys_prompt,
-        #"temp":st.session_state.temp,
-        #"model":st.session_state.model})
+        bot = ({"bot_name":st.session_state.bot_name,
+        "sys_prompt":st.session_state.sys_prompt,
+        "temp":st.session_state.temp,
+        "model":st.session_state.model})
         # ToDo: Test einfügen, ob der Name/Prompt bereits existiert.
         # Liste an db übergeben
-        #if db.insert_bot_sandkasten(bot) == False:
-        #    st.error("Es gibt schon einen Bot mit diesem Namen.")
-        #else:
-        #    st.success('Prompt im Sandkasten geteilt.')
+        if db.insert_bot_sandkasten(bot) == False:
+            st.error("Es gibt schon einen Bot mit diesem Namen.")
+        else:
+            st.success('Prompt im Sandkasten geteilt.')
 
 # Chatnachrichten darstellen
 def display_input():
