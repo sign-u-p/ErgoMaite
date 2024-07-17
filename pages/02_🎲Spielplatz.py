@@ -1,5 +1,6 @@
 import streamlit as st
 import openai
+from openai import OpenAI
 
 import db
 import pw_check as pw
@@ -8,7 +9,7 @@ import parameters as par
 #Passwort checken
 if pw.check_password() == False:
     st.stop()  # Do not continue if check_password is not True.
-
+client = OpenAI()
 
 # Initialisiere session_state-variablen
 if "bot" not in st.session_state:
@@ -133,18 +134,19 @@ def process_input():
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             full_response = ""
-            for response in openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model=st.session_state["model"],
                 temperature=st.session_state["temp"],
-                messages=st.session_state.messages,
-     #               {"role":"system", "content": "Du bist ein Auto"},
-     #               {"role": m["role"], "content": m["content"]}
-     #               for m in st.session_state.messages],
-                stream=True
-            ):
-                full_response += response.choices[0].delta.get("content", "")
-                message_placeholder.markdown(full_response+"|")
-            message_placeholder.markdown(full_response)
+                messages=st.session_state["messages"],
+                #                {"role":"system", "content": "Du bist ein Auto"},
+                #                {"role": m["role"], "content": m["content"]}
+                #                for m in st.session_state.messages],
+                stream=False
+            )
+            full_response += response.choices[0].message.content
+            # message_placeholder.markdown(full_response+"|")
+            # message_placeholder.markdown(full_response)
+            st.markdown(full_response)
         st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 display_input()

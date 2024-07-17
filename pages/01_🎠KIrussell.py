@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 import openai
+from openai import OpenAI
 
 import db
 import parameters as par
@@ -11,7 +12,10 @@ import pw_check as pw
 if pw.check_password() == False:
     st.stop()
 
+#st.toast("🐛Im KIrussell ruckelt es gerade. Du kannst dich hier momentan nur mit Birgit unterhalten. \n Sollten dir weitere Bugs auffallen, lass mich das bitte wissen. LG Henrik")
+
 openai.api_key=st.secrets["OPENAI_API_KEY"]
+client = OpenAI()
 
 # state variablen initialisieren
 if "Komme_vom_Spielplatz" not in st.session_state:
@@ -99,6 +103,13 @@ def update_selection(selected):
 
 
 with st.sidebar:
+    #Buginfo
+    if st.button("🐛Warum sind alle Birgit? ;)"):
+        st.toast("Sollten dir weitere Bugs auffallen, lass mich das bitte wissen. LG Henrik")
+        st.toast(
+            "🐛Im KIrussell ruckelt es gerade. Du kannst dich hier momentan nur mit Birgit unterhalten.")
+
+
 
     st.session_state["choice"] = db.get_choice()
     #st.session_state["choice"] =["Conrad", "Prosa"]
@@ -109,7 +120,6 @@ with st.sidebar:
     if st.button("Neues Gespräch starten"):
         st.session_state.messages = [{"role": "system", "content": st.session_state.sys_prompt}]
         st.success(f"Alles klaro...ein neues Gespräch mit **{st.session_state.bot_name}** ist gestartet.")
-
 
 st.markdown(f"> **{st.session_state.bot_name}** @ 🎠")
 if st.session_state.explanation_title != None:
@@ -137,51 +147,53 @@ def process_input():
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            message_placeholder = st.empty()
+            #message_placeholder = st.empty()
             full_response = ""
             try:
-                for response in openai.ChatCompletion.create(
+                #for response in client.chat.completions.create(
+                response = client.chat.completions.create(
                     model=st.session_state["model"],
                     temperature=st.session_state["temp"],
                     messages=st.session_state["messages"],
         #                {"role":"system", "content": "Du bist ein Auto"},
         #                {"role": m["role"], "content": m["content"]}
         #                for m in st.session_state.messages],
-                    stream=True
-                ):
-                    full_response += response.choices[0].delta.get("content", "")
-                    message_placeholder.markdown(full_response+"|")
-                message_placeholder.markdown(full_response)
+                    stream=False
+                )
+                full_response += response.choices[0].message.content
+                #message_placeholder.markdown(full_response+"|")
+                #message_placeholder.markdown(full_response)
+                st.markdown(full_response)
             except:
                 try:
                     time.sleep(5)
-                    for response in openai.ChatCompletion.create(
-                            model=st.session_state["model"],
-                            temperature=st.session_state["temp"],
-                            messages=st.session_state["messages"],
-                            #                {"role":"system", "content": "Du bist ein Auto"},
-                            #                {"role": m["role"], "content": m["content"]}
-                            #                for m in st.session_state.messages],
-                            stream=True
-                    ):
-                        full_response += response.choices[0].delta.get("content", "")
-                        message_placeholder.markdown(full_response + "|")
-                    message_placeholder.markdown(full_response)
+                    response = client.chat.completions.create(
+                        model=st.session_state["model"],
+                        temperature=st.session_state["temp"],
+                        messages=st.session_state["messages"],
+                        #                {"role":"system", "content": "Du bist ein Auto"},
+                        #                {"role": m["role"], "content": m["content"]}
+                        #                for m in st.session_state.messages],
+                        stream=False
+                    )
+                    full_response += response.choices[0].message.content
+                    # message_placeholder.markdown(full_response+"|")
+                    # message_placeholder.markdown(full_response)
+                    st.markdown(full_response)
                 except:
-                    for response in openai.ChatCompletion.create(
-                            model="gpt-3.5-turbo",
-                            temperature=st.session_state["temp"],
-                            messages=st.session_state["messages"],
-                            #                {"role":"system", "content": "Du bist ein Auto"},
-                            #                {"role": m["role"], "content": m["content"]}
-                            #                for m in st.session_state.messages],
-                            stream=True
-                    ):
-                        full_response += response.choices[0].delta.get("content", "")
-                        message_placeholder.markdown(full_response + "|")
-                    message_placeholder.markdown(full_response)
-
-
+                    response = client.chat.completions.create(
+                        model=st.session_state["gpt-3.5-turbo"],
+                        temperature=st.session_state["temp"],
+                        messages=st.session_state["messages"],
+                        #                {"role":"system", "content": "Du bist ein Auto"},
+                        #                {"role": m["role"], "content": m["content"]}
+                        #                for m in st.session_state.messages],
+                        stream=False
+                    )
+                    full_response += response.choices[0].message.content
+                    # message_placeholder.markdown(full_response+"|")
+                    # message_placeholder.markdown(full_response)
+                    st.markdown(full_response)
         st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 display_input()
