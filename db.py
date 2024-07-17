@@ -33,7 +33,7 @@ def add_bot(bot):
         client.ErgoMaite.Bots.insert_one(bot)
         return True
     except Exception as e:
-        raise Exception(f"The following error occurred: {feedback}", e)
+        raise Exception(f"The following error occurred:", e)
 
 def get_bot(bot_name):
     try:
@@ -104,3 +104,30 @@ def get_start():
         return start
     except Exception as e:
         raise Exception(f"The following error occurred:", e)
+
+
+def add_image(image):
+    try:
+        image_url = image["image_url"]
+        test_existance = client.ErgoMaite.Images.find_one({"image_url": image_url})
+        if test_existance == None:
+            client.ErgoMaite.Images.insert_one(image)
+            return True
+        else:
+            return False
+    except Exception as e:
+        raise Exception("The following error occurred: ", e)
+
+def search_image(image_url):
+    try:
+        image = client.ErgoMaite.Images.find_one({"image_url":image_url})
+        return image
+    except Exception as e:
+        raise Exception("The following error occurred: ", e)
+
+def get_all_images():
+    try:
+        image_list = client.ErgoMaite.Images.distinct("image_url")
+        return image_list
+    except Exception as e:
+        raise Exception("The following error occurred: ", e)
