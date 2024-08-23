@@ -16,10 +16,12 @@ if "image_list" not in st.session_state:
 if "image" not in st.session_state:
   st.session_state["image"] = ()
 
+
 nextcloud_url = st.secrets["NC_URL"]
 username = st.secrets["NC_user"]
 password = st.secrets["NC_pw"]
 nc_folder = "pic_uploads"
+altern_folder ="pic_uploads/Kartendeck"
 
 st.markdown(f"> 🎨")
 with st.expander("Wie geht das hier?"):
@@ -89,6 +91,45 @@ def store_pic(image_content, nextcloud_url, nc_folder, username, password):
       print("Antwort der Nextcloud-API:", response.content)
       raise Exception("Fehler beim Hochladen des Bildes: " + str(response.content))
 
+
+def store_pic_altern(image_content, nextcloud_url, nc_folder, username, password):
+  folder_path = altern_folder
+  # Aktuelles Datum und Uhrzeit abrufen
+  current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+  file_name = f"generated_image_{current_datetime}.jpg"
+  full_path = f"{folder_path}/{file_name}"
+
+  # Sende die Datei an Nextcloud
+  response = requests.put(
+    f"{nextcloud_url}/remote.php/webdav/{full_path}",
+    auth=(username, password),
+    data=image_content
+  )
+  print(response)
+
+  # Überprüfe, ob der Upload erfolgreich war
+  if response.status_code == 201:
+    share_response = requests.post(
+      f"{nextcloud_url}/ocs/v2.php/apps/files_sharing/api/v1/shares",
+      auth=(username, password),
+      headers={
+        "OCS-APIRequest": "true"
+      },
+      data={
+        "path": f"/{full_path}",
+        "shareType": 3,  # 3 steht für öffentlichen Link
+        "permissions": 1  # 1 steht für nur Lesen
+      }
+    )
+    print("Upload erfolgreich!")
+    if share_response.status_code == 200:
+      print(response.url)
+    else:
+      raise Exception("Fehler beim Erstellen des öffentlichen Links: " + str(share_response))
+  else:
+    print("Antwort der Nextcloud-API:", response.content)
+    raise Exception("Fehler beim Hochladen des Bildes: " + str(response.content))
+
 col1, col2, col3 = st.columns(3)
 
 with st.form("form"):
@@ -112,4 +153,17 @@ if st.button("Bild mit dem Kurs teilen"):
       st.markdown("TipTop...Dein Bild ist in die Galerie geladen.")
       st.markdown(
         "Du findest alle vom Kurs erstellten Bilder hier: https://share.olatu.de/index.php/s/ZR56mXYbHTXd5rq")
+      st.image(st.session_state.image_url)
+
+if st.button("Bild dem Kartendeck hinzufügen"):
+  if "prompt" not in st.session_state:
+    st.markdown("Es gibt noch kein Bild, das geteilt werden könnte. Erstelle zunächst eines, indem du oben einen Prompt eingibst.")
+  else:
+    with st.spinner("Upload..."):
+      store_pic_altern(st.session_state.image_url, nextcloud_url, nc_folder, username, password)
+      st.markdown("TipTop...Dein Bild wurde dem Kartendeck hinzugefügt.")
+      st.markdown(
+        "Du findest alle vom Kurs erstellten Bilder hier.: https://share.olatu.de/index.php/s/ZR56mXYbHTXd5rq")
+      st.markdown(
+        "Alle geteilten Bildkarten findest du dort im Ordner \"Kartendeck\"")
       st.image(st.session_state.image_url)
