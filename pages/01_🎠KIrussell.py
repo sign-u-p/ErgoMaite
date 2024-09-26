@@ -12,8 +12,6 @@ import pw_check as pw
 if pw.check_password() == False:
     st.stop()
 
-#st.toast("🐛Im KIrussell ruckelt es gerade. Du kannst dich hier momentan nur mit Birgit unterhalten. \n Sollten dir weitere Bugs auffallen, lass mich das bitte wissen. LG Henrik")
-
 openai.api_key=st.secrets["OPENAI_API_KEY"]
 client = OpenAI()
 
@@ -103,16 +101,7 @@ def update_selection(selected):
 
 
 with st.sidebar:
-    #Buginfo
-    if st.button("🐛Warum sind alle Birgit? ;)"):
-        st.toast("Sollten dir weitere Bugs auffallen, lass mich das bitte wissen. LG Henrik")
-        st.toast(
-            "🐛Im KIrussell ruckelt es gerade. Du kannst dich hier momentan nur mit Birgit unterhalten.")
-
-
-
     st.session_state["choice"] = db.get_choice()
-    #st.session_state["choice"] =["Conrad", "Prosa"]
     st.session_state["selected"]=st.selectbox("Mit wem magst du reden?",st.session_state["choice"])
     if st.button("Bot wählen"):
         update_selection(st.session_state.selected)
