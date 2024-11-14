@@ -1,2 +1,2 @@
 # Standardbot im Neuland
-initial = "Birgit"
+initial = "Herr Weber"
