@@ -5,7 +5,7 @@ import db
 import pw_check as pw
 import parameters as par
 
- Passwort checken
+ #Passwort checken
 if pw.check_password() == False:
     st.stop()
 
