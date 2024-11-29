@@ -60,19 +60,19 @@ with st.expander("💡 Prompting-Techniken im Überblick", False):
     st.subheader("Zero-Shot Prompting")
     st.markdown("""
         Stell dir Zero-Shot Prompting wie eine direkte Ansage vor: Du sagst genau, was du brauchst - ohne Beispiele oder Umschweife. 
-        Das ist super praktisch für die ganzen organisatorischen Aufgaben in deiner Praxis.
+        Das ist zum Beispiel super praktisch, wenn du zu einem allgemeinen Thema einen Textentwurf erstellen magst.
         """)
     
     st.subheader("One-Shot Prompting")
     st.markdown("""
         Bei One-Shot Prompting zeigst du einmal vor, wie etwas aussehen soll. Die KI nutzt dann genau diese Struktur für weitere Inhalte. 
-        Das spart dir Zeit bei der Dokumentation und hilft, einen einheitlichen Standard zu entwickeln.
+        Das hilft, einen einheitlichen Standard zu entwickeln.
         """)
     
     st.subheader("Few-Shot Prompting")
     st.markdown("""
         Few-Shot Prompting funktioniert mit mehreren Beispielen. Du zeigst der KI verschiedene Varianten und sie erkennt das Muster dahinter. 
-        Das ist besonders hilfreich, wenn du betätigungsorientierte Formulierungen entwickeln willst.
+        Das ist besonders hilfreich, wenn du beispielsweise betätigungsorientierte Formulierungen entwickeln willst.
         """)
     
     st.subheader("Chain-of-Thought Prompting")
@@ -273,15 +273,15 @@ Ja, das ist so mein Wochenplan. Es ist ein bisschen viel, aber ich finde, es hä
 ⚡️ Ausgangssituation:
 Du hast diese Beispiele für Funktionsorientierte Ziele und mögliche daraus resultierende Ziele nach COAST:
 
-'Verbesserung der Handkraft' -> 'Herr B. schreibt (mit seiner rechten Hand) mithilfe eines griffverdickten Stiftes seinen Namen auf ein Formular bis zum Datum.'
-'Frau D. ist in der Lage, zum Ende der 10 Einheiten eine Daumenopposition durchzuführen.' -> 'Frau D. schließt ihre Haustür (schmerzfrei) mit dem Schlüssel auf und zu bis zum Datum.'
-'regelmäßig und genug Nahrungsaufnahme' -> 'Frau L. nimmt täglich 3 Mahlzeiten selbstständig zu Hause zu sich bis zum Datum.'
-'Verbesserung/Erhalt der Gedächtnisfunktion' -> 'Frau M. löst ein einfaches Kreuzworträtsel mit verbaler Anleitung in einer ruhigen Umgebung bis zum Datum.'
-'Felix arbeitet konzentriert an seinen Hausaufgaben und lässt sich dabei nicht ablenken.' -> 'Felix erledigt innerhalb einer halben Stunde seine Deutschhausaufgaben mit verbaler Anleitung seiner Mutter bis zum Datum'
-'Karl soll eine Aufgabe für 5 Minuten konzentriert bearbeiten, ohne sich dabei ablenken zu lassen.' -> 'Karl erledigt 10 Matheaufgaben selbstständig in 10 Minuten in seiner Schulklasse bis zum Datum.'
-'in der Akte: Brot schmieren, im Arztbericht: Erarbeiten von Strategien, um selbstständig das Brot zu schmieren.' -> 'Herr S. bestreicht ein Brot mit weicher Butter selbstständig mit einem griffverdickten Messer bis zum Datum.'
-'Erarbeitung von Gedächtnisstrategien' -> 'Herr T. kauft bis zum Datum 5 Zutaten selbstständig im Supermarkt ohne Einkaufzettel ein.'
-'hält den Stift im Dreipunktgriff' -> 'Leon hält beim Schreiben einer DIN-A4-Seite den Bleistift im Dreipunktgriff bis zum Datum.'
+*'Verbesserung der Handkraft' -> 'Herr B. schreibt (mit seiner rechten Hand) mithilfe eines griffverdickten Stiftes seinen Namen auf ein Formular bis zum Datum.'
+*'Frau D. ist in der Lage, zum Ende der 10 Einheiten eine Daumenopposition durchzuführen.' -> 'Frau D. schließt ihre Haustür (schmerzfrei) mit dem Schlüssel auf und zu bis zum Datum.'
+*'regelmäßig und genug Nahrungsaufnahme' -> 'Frau L. nimmt täglich 3 Mahlzeiten selbstständig zu Hause zu sich bis zum Datum.'
+*'Verbesserung/Erhalt der Gedächtnisfunktion' -> 'Frau M. löst ein einfaches Kreuzworträtsel mit verbaler Anleitung in einer ruhigen Umgebung bis zum Datum.'
+*'Felix arbeitet konzentriert an seinen Hausaufgaben und lässt sich dabei nicht ablenken.' -> 'Felix erledigt innerhalb einer halben Stunde seine Deutschhausaufgaben mit verbaler Anleitung seiner Mutter bis zum Datum'
+*'Karl soll eine Aufgabe für 5 Minuten konzentriert bearbeiten, ohne sich dabei ablenken zu lassen.' -> 'Karl erledigt 10 Matheaufgaben selbstständig in 10 Minuten in seiner Schulklasse bis zum Datum.'
+*'in der Akte: Brot schmieren, im Arztbericht: Erarbeiten von Strategien, um selbstständig das Brot zu schmieren.' -> 'Herr S. bestreicht ein Brot mit weicher Butter selbstständig mit einem griffverdickten Messer bis zum Datum.'
+*'Erarbeitung von Gedächtnisstrategien' -> 'Herr T. kauft bis zum Datum 5 Zutaten selbstständig im Supermarkt ohne Einkaufzettel ein.'
+*'hält den Stift im Dreipunktgriff' -> 'Leon hält beim Schreiben einer DIN-A4-Seite den Bleistift im Dreipunktgriff bis zum Datum.'
 
 Quelle: Brinkmann S. COAST – Ziele betätigungsfokussiert … neuroreha 2024; 16: 129–135, Thieme (2024)
 
@@ -491,20 +491,15 @@ def get_teacher_feedback(technique, exercise=None):
     if isinstance(current_task, dict):
         current_task = current_task[exercise]["task"] if exercise else current_task["task"]
     
-    teacher_prompt = f"""Als erfahrener Prompting-Lehrer analysiere den bisherigen Übungsverlauf:
+    teacher_prompt = f"""Gib mir ein Feedback zu folgender Übung:
     
     Aktuelle Technik: {technique}
     Aktuelle Aufgabe: {current_task}
     
+    Setze in deinem Feedback den Fokus hauptsächlich auf meinen letzten Promptingversuch. Wenn es für meinen Lernerfolg sinnvoll ist, beziehe aber auch unterschiede, verbesserungen oder verschlechterungen zu vorherigen Versuchen in den Blick. Tue dies aber nur, wenn es didaktisch zielführend ist.
+
     Gesprächsverlauf:
-    {str(st.session_state.displayed_messages)}
-    
-    Gib folgendes Feedback:
-    1. Erkläre kurz die aktuelle Prompting-Technik, falls du schächen erkennst.
-    2. Analysiere die bisherigen Prompting-Versuche und gibt konkrete Verbesserungsvorschläge.
-    3. Motiviere zum erneuten Üben, wenn du die notwendigkeit siehst. Ansonsten rate dazu, dass der User sich die nächste Technik anschaut.
-    
-    Bleibe dabei immer unterstützend und konstruktiv."""
+    {str(st.session_state.displayed_messages)}"""
     
     teacher_messages = [
         {"role": "system", "content": st.session_state.teacher_sys_prompt},
@@ -618,7 +613,7 @@ with st.sidebar:
     @st.dialog("🎓 Prompting Teacher")
     def teacher():
         if st.button("Frag den Teacher um Rat", help="Lass dir Tipps zur aktuellen Übung geben"):
-            with st.spinner("Der Teacher schat sich deine Übung an..."):
+            with st.spinner("Der Teacher schaut sich deine Übung mal an..."):
                 feedback = get_teacher_feedback(
                     technique, 
                     exercise
