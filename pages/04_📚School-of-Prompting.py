@@ -9,8 +9,7 @@ import parameters as par
 if pw.check_password() == False:
     st.stop()
 
-client = OpenAI()
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Initialisiere session_state-variablen
 if "sop_bot" not in st.session_state:
