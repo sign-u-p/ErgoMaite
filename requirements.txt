@@ -1,4 +1,4 @@
-openai==1.35.14
+openai==0.28.0
 pymongo==4.7.2
 streamlit==1.40.0
 pyocclient==0.6
