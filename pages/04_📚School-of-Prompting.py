@@ -65,13 +65,6 @@ Alle Übungen sind datenschutzkonform und arbeiten **ohne Klientendaten**. Du le
 - 🔍 Fachkonzepte erschließen und Literatur aufbereiten
 - 🎯 Therapieplanung vorbereiten (generisch)
 - 🤔 Reflexion und Perspektivwechsel
-
-**Was du hier NICHT übst** (weil datenschutzrechtlich problematisch):
-- ❌ Notizen von Klient:innen verarbeiten
-- ❌ Befunde oder Dokumentation erstellen
-- ❌ Personenbezogene Daten in KI eingeben
-
-→ **Merke:** KI ist ein Werkzeug für Wissensvermittlung und Vorbereitung, nicht für Klientendokumentation!
 """)
 
 # Optionaler Expander für mehr Details
@@ -903,56 +896,108 @@ def display_task_with_hint(technique, exercise):
             st.markdown(task_messages[technique][exercise]["hint"])
 
 def get_teacher_feedback(technique, exercise=None):
-    """Generiert kontextspezifisches Feedback vom Teacher"""
+    """Generiert kontextspezifisches Feedback vom Teacher als strukturiertes JSON"""
+    import json
+    import time
+
     current_task = task_messages[technique]
     if isinstance(current_task, dict):
         current_task = current_task[exercise]["task"] if exercise else current_task["task"]
-    
-    teacher_prompt = f"""Gib mir ein Feedback zu folgender Übung:
-    
-    Aktuelle Technik: {technique}
-    Aktuelle Aufgabe: {current_task}
-    
-    Setze in deinem Feedback den Fokus hauptsächlich auf meinen letzten Promptingversuch. Wenn es für meinen Lernerfolg sinnvoll ist, beziehe aber auch Unterschiede, Verbesserungen oder Verschlechterungen zu vorherigen Versuchen in den Blick. Tue dies aber nur, wenn es didaktisch zielführend ist.
 
-    Gesprächsverlauf:
-    {str(st.session_state.displayed_messages)}"""
-    
+    teacher_prompt = f"""Gib mir ein strukturiertes Feedback zu folgender Übung.
+
+WICHTIG: Antworte AUSSCHLIESSLICH mit einem validen JSON-Objekt. Kein zusätzlicher Text davor oder danach!
+
+Aktuelle Technik: {technique}
+Aktuelle Aufgabe: {current_task}
+
+Setze in deinem Feedback den Fokus hauptsächlich auf meinen letzten Promptingversuch. Wenn es für meinen Lernerfolg sinnvoll ist, beziehe aber auch Unterschiede, Verbesserungen oder Verschlechterungen zu vorherigen Versuchen in den Blick. Tue dies aber nur, wenn es didaktisch zielführend ist.
+
+Gesprächsverlauf:
+{str(st.session_state.displayed_messages)}
+
+Antworte mit folgendem JSON-Format:
+{{
+    "gesamtbewertung": "Eine kurze Zusammenfassung (1-2 Sätze)",
+    "staerken": [
+        "Stärke 1",
+        "Stärke 2"
+    ],
+    "verbesserungspotenzial": [
+        "Verbesserungsvorschlag 1",
+        "Verbesserungsvorschlag 2"
+    ],
+    "konkrete_tipps": [
+        "Konkreter Tipp 1",
+        "Konkreter Tipp 2"
+    ],
+    "beispiel_prompt": "Ein verbesserter Beispiel-Prompt (optional)"
+}}
+
+Antworte NUR mit dem JSON-Objekt, ohne Markdown-Formatierung oder zusätzlichen Text!"""
+
     teacher_messages = [
         {"role": "system", "content": st.session_state.teacher_sys_prompt},
         {"role": "user", "content": teacher_prompt}
     ]
-    
-    try:
-        feedback = llm_provider.call_llm(
-            model=st.session_state.teacher_model,
-            temperature=st.session_state.teacher_temp,
-            messages=teacher_messages
-        )
 
-        st.session_state.teacher_messages.append({
-            "role": "assistant",
-            "content": feedback
-        })
-
-        return feedback
-    except:
+    # Versuche bis zu 2x bei Fehlern
+    for attempt in range(2):
         try:
-            feedback = llm_provider.call_llm(
-                model=st.session_state.teacher_model_if_error,
+            feedback_raw = llm_provider.call_llm(
+                model=st.session_state.teacher_model if attempt == 0 else st.session_state.teacher_model_if_error,
                 temperature=st.session_state.teacher_temp,
                 messages=teacher_messages
             )
 
+            # Versuche JSON zu parsen
+            # Entferne mögliche Markdown-Code-Blöcke
+            feedback_clean = feedback_raw.strip()
+            if feedback_clean.startswith("```json"):
+                feedback_clean = feedback_clean[7:]
+            if feedback_clean.startswith("```"):
+                feedback_clean = feedback_clean[3:]
+            if feedback_clean.endswith("```"):
+                feedback_clean = feedback_clean[:-3]
+            feedback_clean = feedback_clean.strip()
+
+            feedback_json = json.loads(feedback_clean)
+
+            # Speichere strukturiertes Feedback
             st.session_state.teacher_messages.append({
                 "role": "assistant",
-                "content": feedback
+                "content": feedback_json
             })
 
-            return feedback
+            return feedback_json
 
+        except json.JSONDecodeError:
+            # Bei JSON-Fehler: Warte kurz und versuche es mit Fallback-Modell
+            if attempt == 0:
+                time.sleep(2)
+                continue
+            else:
+                # Beim zweiten Fehlschlag: Gib Fehler zurück
+                return {
+                    "gesamtbewertung": "Fehler beim Generieren des Feedbacks. Bitte versuche es erneut.",
+                    "staerken": [],
+                    "verbesserungspotenzial": [],
+                    "konkrete_tipps": ["Klicke erneut auf 'Feedback holen'"],
+                    "beispiel_prompt": None
+                }
         except Exception as e:
-            return f"Ups, da ist etwas schiefgegangen: {str(e)}"
+            # Bei anderen Fehlern: Warte und retry
+            if attempt == 0:
+                time.sleep(2)
+                continue
+            else:
+                return {
+                    "gesamtbewertung": f"Fehler: {str(e)}. Bitte versuche es erneut.",
+                    "staerken": [],
+                    "verbesserungspotenzial": [],
+                    "konkrete_tipps": ["Klicke erneut auf 'Feedback holen'"],
+                    "beispiel_prompt": None
+                }
 
 # Seitenleiste - Clean und fokussiert
 with st.sidebar:
@@ -1041,19 +1086,64 @@ with st.sidebar:
 
     st.markdown("---")
         
-    @st.dialog("🎓 Teacher")
+    def display_teacher_feedback(feedback):
+        """Zeigt strukturiertes Teacher-Feedback responsiv an"""
+        if isinstance(feedback, dict):
+            # Gesamtbewertung
+            st.markdown("### 📊 Gesamtbewertung")
+            st.info(feedback.get("gesamtbewertung", "Keine Bewertung vorhanden"))
+
+            col1, col2 = st.columns(2)
+
+            # Stärken
+            with col1:
+                st.markdown("### ✅ Stärken")
+                staerken = feedback.get("staerken", [])
+                if staerken:
+                    for staerke in staerken:
+                        st.success(f"• {staerke}")
+                else:
+                    st.caption("Keine Stärken identifiziert")
+
+            # Verbesserungspotenzial
+            with col2:
+                st.markdown("### 🎯 Verbesserungspotenzial")
+                verbesserungen = feedback.get("verbesserungspotenzial", [])
+                if verbesserungen:
+                    for verb in verbesserungen:
+                        st.warning(f"• {verb}")
+                else:
+                    st.caption("Keine Verbesserungen nötig")
+
+            # Konkrete Tipps
+            st.markdown("### 💡 Konkrete Tipps")
+            tipps = feedback.get("konkrete_tipps", [])
+            if tipps:
+                for idx, tipp in enumerate(tipps, 1):
+                    st.markdown(f"**{idx}.** {tipp}")
+            else:
+                st.caption("Keine Tipps vorhanden")
+
+            # Beispiel-Prompt (optional)
+            if feedback.get("beispiel_prompt"):
+                st.markdown("### 📝 Beispiel-Prompt")
+                st.code(feedback["beispiel_prompt"], language=None)
+        else:
+            # Fallback für Nicht-JSON-Feedback
+            st.markdown(str(feedback))
+
+    @st.dialog("🎓 Teacher", width="large")
     def teacher():
         if st.button("💡 Feedback holen", help="Lass dir Tipps geben", use_container_width=True):
             with st.spinner("🎓 Teacher analysiert..."):
                 feedback = get_teacher_feedback(technique, exercise)
-                with st.chat_message("teacher", avatar="🎓"):
-                    st.markdown(feedback)
+                display_teacher_feedback(feedback)
 
         with st.expander("📚 Bisheriges Feedback", False):
             if st.session_state.teacher_messages:
                 for idx, msg in enumerate(st.session_state.teacher_messages):
-                    st.markdown(f"**#{idx+1}:**")
-                    st.markdown(msg["content"])
+                    st.markdown(f"#### Feedback #{idx+1}")
+                    display_teacher_feedback(msg["content"])
                     if idx < len(st.session_state.teacher_messages) - 1:
                         st.markdown("---")
             else:
@@ -1061,6 +1151,150 @@ with st.sidebar:
 
     if st.button("🎓 Teacher", use_container_width=True):
         teacher()
+
+    st.markdown("---")
+
+    # Erweiterte Einstellungen (Modelle & Systemprompt)
+    with st.expander("⚙️ Erweiterte Einstellungen", expanded=False):
+        st.info("ℹ️ **Hinweis:** Alle Änderungen gelten nur für diese Session. Die Datenbank wird nicht verändert.")
+
+        # Tab-Navigation für bessere Übersicht
+        tab1, tab2 = st.tabs(["🤖 Modelle", "📝 Systemprompt"])
+
+        with tab1:
+            st.markdown("#### Modell-Auswahl")
+            st.info("💡 **Empfohlen:** Haiku 4.5 für Übungen (schnell & günstig), Sonnet 4.5 für Teacher (besseres Feedback)")
+
+            # Verfügbare Modelle
+            available_models = [
+                "claude-haiku-4-5-20251001",
+                "claude-sonnet-4-5-20250929",
+                "claude-3-5-haiku-20241022",
+                "gpt-4.1",
+                "gpt-4.1-mini",
+                "gpt-4.1-nano",
+                "gpt-4o",
+                "gpt-4o-mini"
+            ]
+
+            # Modell für Assistent (Übungen)
+            st.markdown("**Assistent (für Übungen):**")
+
+            # Finde den aktuellen Index für sop_model
+            try:
+                current_sop_index = available_models.index(st.session_state.sop_model)
+            except ValueError:
+                current_sop_index = 0
+
+            new_sop_model = st.selectbox(
+                "Hauptmodell:",
+                available_models,
+                index=current_sop_index,
+                key="select_sop_model"
+            )
+
+            # Finde den aktuellen Index für sop_model_if_error
+            try:
+                current_sop_error_index = available_models.index(st.session_state.sop_model_if_error)
+            except ValueError:
+                current_sop_error_index = 1
+
+            new_sop_model_if_error = st.selectbox(
+                "Fallback-Modell:",
+                available_models,
+                index=current_sop_error_index,
+                key="select_sop_model_if_error"
+            )
+
+            st.markdown("---")
+
+            # Modell für Teacher
+            st.markdown("**Teacher (für Feedback):**")
+
+            # Finde den aktuellen Index für teacher_model
+            try:
+                current_teacher_index = available_models.index(st.session_state.teacher_model)
+            except ValueError:
+                current_teacher_index = 1
+
+            new_teacher_model = st.selectbox(
+                "Hauptmodell:",
+                available_models,
+                index=current_teacher_index,
+                key="select_teacher_model"
+            )
+
+            # Finde den aktuellen Index für teacher_model_if_error
+            try:
+                current_teacher_error_index = available_models.index(st.session_state.teacher_model_if_error)
+            except ValueError:
+                current_teacher_error_index = 0
+
+            new_teacher_model_if_error = st.selectbox(
+                "Fallback-Modell:",
+                available_models,
+                index=current_teacher_error_index,
+                key="select_teacher_model_if_error"
+            )
+
+            # Zeige aktuell aktive Modelle
+            st.markdown("---")
+            st.markdown("**📋 Aktuell aktiv:**")
+            st.caption(f"Assistent: {st.session_state.sop_model}")
+            st.caption(f"Teacher: {st.session_state.teacher_model}")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("💾 Speichern", use_container_width=True, key="save_models"):
+                    st.session_state.sop_model = new_sop_model
+                    st.session_state.sop_model_if_error = new_sop_model_if_error
+                    st.session_state.teacher_model = new_teacher_model
+                    st.session_state.teacher_model_if_error = new_teacher_model_if_error
+                    st.success("✅ Modelle aktualisiert!")
+                    st.rerun()
+
+            with col2:
+                if st.button("🔄 Zurücksetzen", use_container_width=True, key="reset_models"):
+                    # Lade Original-Modelle aus der Datenbank
+                    original_sop_bot = db.get_bot("Assistent")
+                    original_teacher_bot = db.get_bot("Teacher")
+                    st.session_state.sop_model = original_sop_bot["model"]
+                    st.session_state.sop_model_if_error = original_sop_bot["model_if_error"]
+                    st.session_state.teacher_model = original_teacher_bot["model"]
+                    st.session_state.teacher_model_if_error = original_teacher_bot["model_if_error"]
+                    st.success("✅ Auf Original zurückgesetzt!")
+                    st.rerun()
+
+        with tab2:
+            st.markdown("#### Systemprompt anpassen")
+            st.warning("⚠️ **Achtung:** Änderungen am Systemprompt können das Verhalten des Assistenten grundlegend verändern. Nur ändern, wenn du verstehst, was du tust!")
+
+            st.info("💡 Der Systemprompt definiert die grundlegende Rolle und das Verhalten des Assistenten. Er wird bei jedem Gespräch als erste Nachricht gesendet.")
+
+            # Aktuellen Systemprompt anzeigen und bearbeiten lassen
+            new_sys_prompt = st.text_area(
+                "Systemprompt:",
+                value=st.session_state.sop_sys_prompt,
+                height=200,
+                help="Hier kannst du den Systemprompt anpassen. Änderungen gelten ab dem nächsten Chat-Neustart."
+            )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("💾 Speichern", use_container_width=True, key="save_sysprompt"):
+                    st.session_state.sop_sys_prompt = new_sys_prompt
+                    # Aktualisiere auch die erste Nachricht in messages
+                    st.session_state.messages[0] = {"role": "system", "content": new_sys_prompt}
+                    st.success("✅ Systemprompt aktualisiert!")
+
+            with col2:
+                if st.button("🔄 Zurücksetzen", use_container_width=True, key="reset_sysprompt"):
+                    # Lade den Original-Systemprompt aus der Datenbank
+                    original_bot = db.get_bot("Assistent")
+                    st.session_state.sop_sys_prompt = original_bot["sys_prompt"]
+                    st.session_state.messages[0] = {"role": "system", "content": original_bot["sys_prompt"]}
+                    st.success("✅ Auf Original zurückgesetzt!")
+                    st.rerun()
 
 def display_chat():
     """Display chat messages with modern styling"""
