@@ -1,0 +1,6 @@
+openai==1.55.3
+anthropic==0.39.0
+pymongo==4.7.2
+streamlit==1.40.0
+pyocclient==0.6
+Requests==2.32.3
